@@ -5,6 +5,9 @@ namespace App\Controllers;
 use App\Controllers\BaseController;
 use CodeIgniter\HTTP\ResponseInterface;
 
+use App\Models\DiskonModel;
+use CodeIgniter\I18n\Time;
+
 use App\Models\UserModel; 
 
 class AuthController extends BaseController
@@ -38,6 +41,10 @@ public function login()
                         'role' => $dataUser['role'],
                         'isLoggedIn' => TRUE
                     ]);
+
+                    // Panggil method setDiskonSession dari Diskon controller
+                    $diskonController = new \App\Controllers\Diskon();
+                    $diskonController->setDiskonSession();
 
                     return redirect()->to(base_url('/'));
                 } else {

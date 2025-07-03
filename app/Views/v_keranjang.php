@@ -10,6 +10,13 @@ if (session()->getFlashData('success')) {
 <?php
 }
 ?>
+<!-- Hapus debug session diskon agar tidak tampil di UI -->
+<!--
+<div class="alert alert-warning">
+    <strong>DEBUG: Session Diskon Data:</strong>
+    <pre><?php print_r(session()->get('diskon')); ?></pre>
+</div>
+-->
 <?php echo form_open('keranjang/edit') ?>
 <!-- Table with stripped rows -->
 <table class="table datatable">
@@ -32,9 +39,18 @@ if (session()->getFlashData('success')) {
                 <tr>
                     <td><?php echo $item['name'] ?></td>
                     <td><img src="<?php echo base_url() . "img/" . $item['options']['foto'] ?>" width="100px"></td>
-                    <td><?php echo number_to_currency($item['price'], 'IDR') ?></td>
+                    <td>
+                        <?php echo number_to_currency($item['options']['harga_asli'], 'IDR') ?><br>
+                        <small class="text-success">Diskon: <?php echo number_to_currency($item['options']['diskon'], 'IDR') ?></small><br>
+                        <strong><?php echo number_to_currency($item['price'], 'IDR') ?></strong>
+                    </td>
                     <td><input type="number" min="1" name="qty<?php echo $i++ ?>" class="form-control" value="<?php echo $item['qty'] ?>"></td>
-                    <td><?php echo number_to_currency($item['subtotal'], 'IDR') ?></td>
+                    <td>
+                        <?php 
+                            $subtotalDiskon = ($item['price'] * $item['qty']);
+                            echo number_to_currency($subtotalDiskon, 'IDR');
+                        ?>
+                    </td>
                     <td>
                         <a href="<?php echo base_url('keranjang/delete/' . $item['rowid'] . '') ?>" class="btn btn-danger"><i class="bi bi-trash"></i></a>
                     </td>
@@ -47,7 +63,13 @@ if (session()->getFlashData('success')) {
 </table>
 <!-- End Table with stripped rows -->
 <div class="alert alert-info">
-    <?php echo "Total = " . number_to_currency($total, 'IDR') ?>
+    <?php 
+        $totalDiskon = 0;
+        foreach ($items as $item) {
+            $totalDiskon += $item['price'] * $item['qty'];
+        }
+        echo "Total = " . number_to_currency($totalDiskon, 'IDR');
+    ?>
 </div>
 
 <button type="submit" class="btn btn-primary">Perbarui Keranjang</button>

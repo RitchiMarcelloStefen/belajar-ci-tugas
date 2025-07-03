@@ -225,4 +225,31 @@
   </ul>
 </nav><!-- End Icons Navigation -->
 
+<!--Diskon -->
+<?php if (session()->has('diskon')) : ?>
+    <?php 
+        $diskonSession = session('diskon');
+        $nominalDiskon = 0;
+        if (is_array($diskonSession) && count($diskonSession) > 0) {
+            $nominalDiskon = $diskonSession[0]['nominal'] ?? 0;
+        }
+    ?>
+    <div style="
+        position: fixed;
+        top: 0;
+        left: 65%;
+        transform: translateX(-50%);
+        background-color: #d4edda;
+        color: #155724;
+        padding: 10px 20px;
+        font-weight: bold;
+        z-index: 9999;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        border-radius: 5px;
+    ">
+        Hari Ini Ada Diskon : Rp<?= number_format($nominalDiskon, 0, ',', '.') ?> per item
+    </div>
+<?php endif; ?>
+<!-- End Diskon -->
+
 </header><!-- End Header -->

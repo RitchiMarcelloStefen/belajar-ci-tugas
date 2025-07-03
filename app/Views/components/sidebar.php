@@ -43,12 +43,24 @@
         </a>
     </li>
 <?php
+
 }
+
 ?>
+<?php if (session()->get('role') === 'admin'): ?>
+    <li class="nav-item">
+        <a class="nav-link" href="<?= base_url('diskon') ?>">
+            <i class="bi bi-receipt"></i>
+            <span>Diskon</span>
+        </a>
+    </li>
   <a class="nav-link <?php echo (uri_string() == 'contact') ? "" : "collapsed" ?>" href="contact">
       <i class="bi bi-envelope"></i>
       <span>Contact</span>
     </a>
+    
+            <?php endif; ?>
+
             </li><!-- End Produk Nav -->
         <?php
         }

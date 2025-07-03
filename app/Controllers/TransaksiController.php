@@ -34,12 +34,45 @@ class TransaksiController extends BaseController
 
     public function cart_add()
     {
+        $session = session();
+        $diskonData = $session->get('diskon') ?? [];
+
+        if (!is_array($diskonData)) {
+            $diskonData = [];
+        }
+
+        $hargaAsli = $this->request->getPost('harga');
+        $hargaDiskon = $hargaAsli;
+
+        // Ambil diskon khusus untuk tanggal hari ini
+        $today = date('Y-m-d');
+        $diskonHariIni = null;
+        foreach ($diskonData as $diskon) {
+            if ($diskon['tanggal'] === $today) {
+                $diskonHariIni = $diskon;
+                break;
+            }
+        }
+
+        if ($diskonHariIni) {
+            $hargaDiskon = max(0, $hargaAsli - $diskonHariIni['nominal']);
+        }
+
+        // Debug logs
+        log_message('debug', 'Diskon Hari Ini: ' . print_r($diskonHariIni, true));
+        log_message('debug', 'Harga Asli: ' . $hargaAsli);
+        log_message('debug', 'Harga Diskon: ' . $hargaDiskon);
+
         $this->cart->insert(array(
             'id'        => $this->request->getPost('id'),
             'qty'       => 1,
-            'price'     => $this->request->getPost('harga'),
+            'price'     => $hargaDiskon,
             'name'      => $this->request->getPost('nama'),
-            'options'   => array('foto' => $this->request->getPost('foto'))
+            'options'   => array(
+                'foto' => $this->request->getPost('foto'),
+                'harga_asli' => $hargaAsli,
+                'diskon' => $diskonHariIni ? $diskonHariIni['nominal'] : 0
+            )
         ));
         session()->setflashdata('success', 'Produk berhasil ditambahkan ke keranjang. (<a href="' . base_url() . 'keranjang">Lihat</a>)');
         return redirect()->to(base_url('/'));
@@ -54,11 +87,35 @@ class TransaksiController extends BaseController
 
     public function cart_edit()
     {
+        $session = session();
+        $diskonData = $session->get('diskon') ?? [];
+        if (!is_array($diskonData)) {
+            $diskonData = [];
+        }
+        $today = date('Y-m-d');
+        $diskonHariIni = null;
+        foreach ($diskonData as $diskon) {
+            if ($diskon['tanggal'] === $today) {
+                $diskonHariIni = $diskon;
+                break;
+            }
+        }
+
         $i = 1;
         foreach ($this->cart->contents() as $value) {
+            $qty = $this->request->getPost('qty' . $i++);
+            $hargaAsli = $value['options']['harga_asli'] ?? $value['price'];
+            $hargaDiskon = $hargaAsli;
+            $diskonNominal = 0;
+            if ($diskonHariIni) {
+                $hargaDiskon = max(0, $hargaAsli - $diskonHariIni['nominal']);
+                $diskonNominal = $diskonHariIni['nominal'];
+            }
             $this->cart->update(array(
                 'rowid' => $value['rowid'],
-                'qty'   => $this->request->getPost('qty' . $i++)
+                'qty'   => $qty,
+                'price' => $hargaDiskon,
+                'options' => array_merge($value['options'], ['diskon' => $diskonNominal])
             ));
         }
 
@@ -139,42 +196,48 @@ public function getCost()
     return $this->response->setJSON($body['data']);
 }
 
-public function buy()
-{
-    if ($this->request->getPost()) { 
-        $dataForm = [
-            'username' => $this->request->getPost('username'),
-            'total_harga' => $this->request->getPost('total_harga'),
-            'alamat' => $this->request->getPost('alamat'),
-            'ongkir' => $this->request->getPost('ongkir'),
-            'status' => 0,
-            'created_at' => date("Y-m-d H:i:s"),
-            'updated_at' => date("Y-m-d H:i:s")
-        ];
+    public function buy()
+    {
+        if ($this->request->getPost()) { 
+            $session = session();
+            $diskonData = $session->get('diskon') ?? [];
 
-        $this->transaction->insert($dataForm);
-
-        $last_insert_id = $this->transaction->getInsertID();
-
-        foreach ($this->cart->contents() as $value) {
-            $dataFormDetail = [
-                'transaction_id' => $last_insert_id,
-                'product_id' => $value['id'],
-                'jumlah' => $value['qty'],
-                'diskon' => 0,
-                'subtotal_harga' => $value['qty'] * $value['price'],
+            $dataForm = [
+                'username' => $this->request->getPost('username'),
+                'total_harga' => $this->request->getPost('total_harga'),
+                'alamat' => $this->request->getPost('alamat'),
+                'ongkir' => $this->request->getPost('ongkir'),
+                'status' => 0,
                 'created_at' => date("Y-m-d H:i:s"),
                 'updated_at' => date("Y-m-d H:i:s")
             ];
 
-            $this->transaction_detail->insert($dataFormDetail);
-        }
+            $this->transaction->insert($dataForm);
 
-        $this->cart->destroy();
- 
-        return redirect()->to(base_url());
+            $last_insert_id = $this->transaction->getInsertID();
+
+            foreach ($this->cart->contents() as $value) {
+                $hargaAsli = $value['options']['harga_asli'] ?? $value['price'];
+                $diskon = $hargaAsli - $value['price'];
+
+                $dataFormDetail = [
+                    'transaction_id' => $last_insert_id,
+                    'product_id' => $value['id'],
+                    'jumlah' => $value['qty'],
+                    'diskon' => $diskon,
+                    'subtotal_harga' => $value['qty'] * $value['price'],
+                    'created_at' => date("Y-m-d H:i:s"),
+                    'updated_at' => date("Y-m-d H:i:s")
+                ];
+
+                $this->transaction_detail->insert($dataFormDetail);
+            }
+
+            $this->cart->destroy();
+     
+            return redirect()->to(base_url());
+        }
     }
-}
 
 }
 

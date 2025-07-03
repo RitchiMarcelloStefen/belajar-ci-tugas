@@ -41,6 +41,16 @@ $routes->get('produk', 'ProdukController::index', ['filter' => 'auth']);
 $routes->get('keranjang', 'TransaksiController::index', ['filter' => 'auth']);
 $routes->get('contact', 'ContactController::index', ['filter' => 'auth']);
 
+$routes->group('', ['filter' => 'auth'], function($routes) {
+    // Pastikan nama class Diskon sama persis
+    $routes->get('diskon', 'Diskon::index');
+    $routes->get('diskon/create', 'Diskon::create');
+    $routes->post('diskon/store', 'Diskon::store');
+    $routes->get('diskon/edit/(:num)', 'Diskon::edit/$1');
+    $routes->post('diskon/update/(:num)', 'Diskon::update/$1');
+    $routes->get('diskon/delete/(:num)', 'Diskon::delete/$1');
+});
+
 $routes->group('produk-kategori', ['filter' => 'auth'], function ($routes) {
     $routes->get('', 'ProductCategoryController::index');
     $routes->post('store', 'ProductCategoryController::store');
